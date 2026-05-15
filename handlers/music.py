@@ -181,7 +181,7 @@ def register_music_handlers(app: Client):
 
     @app.on_message(filters.command("skip") & filters.group & not_banned)
     async def skip_command(client: Client, message: Message):
-        from handlers.voice import skip_in_vc, stop_in_vc, is_vc_active
+        from handlers.voice import skip_in_vc, play_in_vc, stop_in_vc, is_vc_active
         chat_id = message.chat.id
         queue = get_queue(chat_id)
         if not queue:
