@@ -33,3 +33,4 @@ def check_config():
         raise ValueError("API_HASH not set in .env file")
     if not BOT_OWNER or BOT_OWNER == 0:
         raise ValueError("BOT_OWNER not set in .env file")
+        STRING_SESSION = os.getenv("STRING_SESSION", "")
