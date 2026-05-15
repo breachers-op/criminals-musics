@@ -21,6 +21,14 @@ A powerful Telegram music bot built with PyroTGfork that plays music in voice ch
 - A Telegram bot token (get it from [@BotFather](https://t.me/botfather))
 - Your Telegram API ID and Hash (get from [my.telegram.org](https://my.telegram.org))
 
+# 🔐 Pyrogram Session Generator
+
+Generate Pyrogram string sessions directly on Replit.
+
+## 🚀 One Click Deploy
+
+[![Run on Replit](https://replit.com/badge/github/MrPerfect/session-generator)](https://replit.com/github/MrPerfect/session-generator)
+
 ### Setup Steps
 
 1. **Clone the repository:**
