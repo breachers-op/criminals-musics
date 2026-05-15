@@ -1,0 +1,2 @@
+run = "python session_generator.py"
+language = "python3"
