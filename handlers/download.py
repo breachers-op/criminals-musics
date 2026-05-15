@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from database import get_session, VoiceChatSession
+from database import get_session, DownloadedSong, User
+from config import DOWNLOAD_DIR, AUDIO_QUALITY
 from handlers.filters import not_banned
 from datetime import datetime
 import yt_dlp
@@ -9,37 +10,6 @@ import os
 import logging
 
 logger = logging.getLogger(__name__)
-
-music_queues = {}
-
-
-def get_queue(chat_id: int):
-    if chat_id not in music_queues:
-        music_queues[chat_id] = []
-    return music_queues[chat_id]
-
-
-async def search_youtube(query: str):
-    ydl_opts = {
-        "quiet": True,
-        "no_warnings": True,
-        "extract_flat": True,
-        "default_search": "ytsearch1",
-    }
-    loop = asyncio.get_event_loop()
-    def _search():
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"ytsearch1:{query}", download=False)
-            if info and "entries" in info and info["entries"]:
-                entry = info["entries"][0]
-                return {
-                    "title": entry.get("title", "Unknown"),
-                    "url": entry.get("url") or f"https://www.youtube.com/watch?v={entry.get('id', '')}",
-                    "duration": entry.get("duration", 0),
-                    "webpage_url": f"https://www.youtube.com/watch?v={entry.get('id', '')}",
-                }
-        return None
-    return await loop.run_in_executor(None, _search)
 
 
 def format_duration(seconds):
@@ -52,136 +22,125 @@ def format_duration(seconds):
     return f"{minutes}:{secs:02d}"
 
 
-def update_session(chat_id, is_playing=None, current_song=None, current_url=None):
-    session = get_session()
-    try:
-        record = session.query(VoiceChatSession).filter_by(chat_id=chat_id).first()
-        if not record:
-            record = VoiceChatSession(chat_id=chat_id)
-            session.add(record)
-        if is_playing is not None:
-            record.is_playing = is_playing
-        if current_song is not None:
-            record.current_song = current_song
-        if current_url is not None:
-            record.current_song_url = current_url
-        record.updated_at = datetime.utcnow()
-        session.commit()
-    finally:
-        session.close()
+def format_size(size_bytes):
+    if not size_bytes:
+        return "Unknown"
+    if size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    return f"{size_bytes / (1024 * 1024):.1f} MB"
 
 
-def register_music_handlers(app: Client):
+async def download_audio(query: str, output_dir: str, quality: str = "192"):
+    ydl_opts = {
+        "format": "bestaudio/best",
+        "outtmpl": os.path.join(output_dir, "%(title)s.%(ext)s"),
+        "postprocessors": [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": quality,
+        }],
+        "quiet": True,
+        "no_warnings": True,
+        "default_search": "ytsearch1",
+    }
+    loop = asyncio.get_event_loop()
+    def _download():
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch1:{query}" if not query.startswith("http") else query, download=True)
+            if "entries" in info:
+                info = info["entries"][0]
+            title = info.get("title", "Unknown")
+            duration = info.get("duration", 0)
+            filename = ydl.prepare_filename(info).rsplit(".", 1)[0] + ".mp3"
+            return {"title": title, "duration": duration, "filename": filename, "webpage_url": info.get("webpage_url", "")}
+    return await loop.run_in_executor(None, _download)
 
-    @app.on_message(filters.command("play") & filters.group & not_banned)
-    async def play_command(client: Client, message: Message):
-        chat_id = message.chat.id
+
+def register_download_handlers(app: Client):
+
+    @app.on_message(filters.command("download") & (filters.private | filters.group) & not_banned)
+    async def download_command(client: Client, message: Message):
         args = message.text.split(None, 1)
         if len(args) < 2:
             await message.reply_text(
-                "🎵 **Usage:** `/play <song name or YouTube URL>`\n"
-                "Example: `/play Shape of You`"
+                "⬇️ **Usage:** `/download <song name or YouTube URL>`\n"
+                "Example: `/download Bohemian Rhapsody`"
             )
             return
+
         query = args[1].strip()
-        status_msg = await message.reply_text(f"🔍 Searching for **{query}**...")
-        result = await search_youtube(query)
-        if not result:
-            await status_msg.edit_text("❌ Could not find that song. Try a different search term.")
-            return
-        queue = get_queue(chat_id)
-        queue.append(result)
-        update_session(chat_id, is_playing=True, current_song=result["title"], current_url=result["webpage_url"])
-        position = len(queue)
-        if position == 1:
-            await status_msg.edit_text(
-                f"🎵 **Now Playing**\n\n"
-                f"🎶 **{result['title']}**\n"
-                f"⏱ Duration: `{format_duration(result['duration'])}`\n"
-                f"🔗 [Watch on YouTube]({result['webpage_url']})"
-            )
-        else:
-            await status_msg.edit_text(
-                f"📋 **Added to Queue** (#{position})\n\n"
-                f"🎶 **{result['title']}**\n"
-                f"⏱ Duration: `{format_duration(result['duration'])}`\n"
-                f"🔗 [Watch on YouTube]({result['webpage_url']})"
-            )
+        user_id = message.from_user.id if message.from_user else 0
+        status_msg = await message.reply_text(f"⬇️ Downloading **{query}**...\nThis may take a moment.")
 
-    @app.on_message(filters.command("play") & filters.private & not_banned)
-    async def play_private(client: Client, message: Message):
-        await message.reply_text("❗ The `/play` command only works in group chats with a voice chat.")
-
-    @app.on_message(filters.command("pause") & filters.group & not_banned)
-    async def pause_command(client: Client, message: Message):
-        chat_id = message.chat.id
-        session = get_session()
         try:
-            record = session.query(VoiceChatSession).filter_by(chat_id=chat_id).first()
-            if not record or not record.is_playing:
-                await message.reply_text("❌ Nothing is currently playing.")
-                return
-            update_session(chat_id, is_playing=False)
-            await message.reply_text("⏸ **Paused** the music.")
-        finally:
-            session.close()
+            result = await download_audio(query, DOWNLOAD_DIR, AUDIO_QUALITY)
+            filepath = result["filename"]
 
-    @app.on_message(filters.command("resume") & filters.group & not_banned)
-    async def resume_command(client: Client, message: Message):
-        chat_id = message.chat.id
-        session = get_session()
+            if not os.path.exists(filepath):
+                await status_msg.edit_text("❌ Download failed. The file could not be saved.")
+                return
+
+            file_size = os.path.getsize(filepath)
+
+            db = get_session()
+            try:
+                record = DownloadedSong(
+                    user_id=user_id,
+                    song_title=result["title"],
+                    song_url=result["webpage_url"],
+                    file_path=filepath,
+                    file_size=file_size,
+                    duration=result["duration"],
+                    downloaded_at=datetime.utcnow(),
+                )
+                db.add(record)
+                db.commit()
+            finally:
+                db.close()
+
+            await status_msg.edit_text(f"📤 Uploading **{result['title']}**...")
+            await message.reply_audio(
+                audio=filepath,
+                title=result["title"],
+                duration=result["duration"],
+                caption=(
+                    f"🎵 **{result['title']}**\n"
+                    f"⏱ Duration: `{format_duration(result['duration'])}`\n"
+                    f"📦 Size: `{format_size(file_size)}`"
+                ),
+            )
+            await status_msg.delete()
+
+        except Exception as e:
+            logger.error(f"Download error: {e}")
+            await status_msg.edit_text(f"❌ Failed to download.\n`{str(e)[:200]}`")
+
+    @app.on_message(filters.command("downloads") & (filters.private | filters.group) & not_banned)
+    async def downloads_command(client: Client, message: Message):
+        user_id = message.from_user.id if message.from_user else 0
+        db = get_session()
         try:
-            record = session.query(VoiceChatSession).filter_by(chat_id=chat_id).first()
-            if not record or not record.current_song:
-                await message.reply_text("❌ Nothing is paused.")
-                return
-            update_session(chat_id, is_playing=True)
-            await message.reply_text(f"▶️ **Resumed**\n🎶 {record.current_song}")
+            songs = (
+                db.query(DownloadedSong)
+                .filter_by(user_id=user_id)
+                .order_by(DownloadedSong.downloaded_at.desc())
+                .limit(10)
+                .all()
+            )
         finally:
-            session.close()
+            db.close()
 
-    @app.on_message(filters.command("stop") & filters.group & not_banned)
-    async def stop_command(client: Client, message: Message):
-        chat_id = message.chat.id
-        queue = get_queue(chat_id)
-        queue.clear()
-        update_session(chat_id, is_playing=False, current_song="", current_url="")
-        await message.reply_text("⏹ **Stopped** playback and cleared the queue.")
-
-    @app.on_message(filters.command("skip") & filters.group & not_banned)
-    async def skip_command(client: Client, message: Message):
-        chat_id = message.chat.id
-        queue = get_queue(chat_id)
-        if not queue:
-            await message.reply_text("❌ The queue is empty, nothing to skip.")
-            return
-        skipped = queue.pop(0)
-        if queue:
-            next_song = queue[0]
-            update_session(chat_id, is_playing=True, current_song=next_song["title"], current_url=next_song["webpage_url"])
+        if not songs:
             await message.reply_text(
-                f"⏭ **Skipped:** {skipped['title']}\n\n"
-                f"🎵 **Now Playing:** {next_song['title']}\n"
-                f"🔗 [YouTube]({next_song['webpage_url']})"
+                "📂 You have no downloaded songs yet.\n"
+                "Use `/download <song>` to download music!"
             )
-        else:
-            update_session(chat_id, is_playing=False, current_song="", current_url="")
-            await message.reply_text(
-                f"⏭ **Skipped:** {skipped['title']}\n\n"
-                "📋 The queue is now empty."
-            )
-
-    @app.on_message(filters.command("queue") & (filters.private | filters.group) & not_banned)
-    async def queue_command(client: Client, message: Message):
-        chat_id = message.chat.id
-        queue = get_queue(chat_id)
-        if not queue:
-            await message.reply_text("📋 The queue is currently empty.\nUse `/play <song>` to add music!")
             return
-        lines = ["📋 **Current Queue**\n"]
-        for i, song in enumerate(queue):
-            icon = "🎵" if i == 0 else f"`{i + 1}.`"
-            label = " ← *Now Playing*" if i == 0 else ""
-            lines.append(f"{icon} **{song['title']}** `[{format_duration(song['duration'])}]`{label}")
-        lines.append(f"\n**Total:** {len(queue)} song(s)")
+
+        lines = ["📂 **Your Recent Downloads** (last 10)\n"]
+        for i, song in enumerate(songs, 1):
+            lines.append(
+                f"`{i}.` **{song.song_title}**\n"
+                f"    ⏱ `{format_duration(song.duration)}` | 📦 `{format_size(song.file_size)}`"
+            )
         await message.reply_text("\n".join(lines))
