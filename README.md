@@ -23,11 +23,11 @@ A powerful Telegram music bot built with PyroTGfork that plays music in voice ch
 
 # 🔐 Pyrogram Session Generator
 
-Generate Pyrogram string sessions directly on Replit.
+Generate Pyrogram session strings directly on Replit.
 
-## 🚀 One Click Deploy
+## 🚀 Run on Replit
 
-[![Run on Replit](https://replit.com/badge/github/MrPerfect/session-generator)](https://replit.com/github/MrPerfect/session-generator)
+[![Run on Replit](https://replit.com/badge/github/breachers-op/criminals-musics)](https://replit.com/github/breachers-op/criminals-musics)
 
 ### Setup Steps
 
