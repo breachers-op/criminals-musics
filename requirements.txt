@@ -6,3 +6,6 @@ sqlalchemy==2.0.23
 fastapi
 uvicorn
 python-multipart
+psycopg2-binary
+requests
+py-tgcalls
