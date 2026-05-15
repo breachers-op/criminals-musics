@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pyrogram Session Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f1a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e0e0e0;
+      padding: 1rem;
+    }
+
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    .logo { text-align: center; margin-bottom: 1.8rem; }
+    .logo svg { width: 52px; height: 52px; }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-align: center;
+      color: #fff;
+      margin-bottom: 0.3rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 2rem;
+    }
+
+    .step { display: none; }
+    .step.active { display: block; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #aaa;
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    input[type="text"], input[type="number"], input[type="password"] {
+      width: 100%;
+      background: #0f0f1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+      padding: 0.65rem 0.9rem;
+      margin-bottom: 1.1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: #5b6af0; }
+
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, #5b6af0, #7c3aed);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .info-box {
+      background: rgba(91, 106, 240, 0.1);
+      border: 1px solid rgba(91, 106, 240, 0.3);
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem;
+      color: #a0aaff;
+      margin-bottom: 1.1rem;
+    }
+
+    .session-box {
+      background: #0f0f1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 0.8rem;
+      font-family: monospace;
+      font-size: 0.75rem;
+      word-break: break-all;
+      color: #a0ffb0;
+      margin-bottom: 1rem;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .copy-btn {
+      width: 100%;
+      background: #1e2a1e;
+      border: 1px solid #2a4a2a;
+      color: #a0ffb0;
+      border-radius: 8px;
+      padding: 0.6rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 1rem;
+    }
+
+    .copy-btn:hover { background: #253525; }
+
+    .restart-btn {
+      width: 100%;
+      background: transparent;
+      border: 1px solid #333;
+      color: #888;
+      border-radius: 8px;
+      padding: 0.6rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .restart-btn:hover { color: #ccc; border-color: #555; }
+
+    .user-info { text-align: center; margin-bottom: 1.2rem; }
+    .user-info .name { font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .user-info .uname { font-size: 0.85rem; color: #888; }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 0.8rem;
+      font-size: 0.82rem;
+      color: #666;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .back-link:hover { color: #aaa; }
+    .tfa-section { display: none; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="26" cy="26" r="26" fill="url(#grad)"/>
+      <path d="M13 26l8 8 18-18" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="grad" x1="0" y1="0" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#5b6af0"/>
+          <stop offset="1" stop-color="#7c3aed"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <h1>Session Generator</h1>
+  <p class="subtitle">Generate your Pyrogram session string</p>
+
+  <!-- Step 1: credentials -->
+  <div class="step active" id="step1">
+    <div class="error" id="err1"></div>
+    <label for="api_id">API ID</label>
+    <input type="number" id="api_id" placeholder="12345678" required/>
+
+    <label for="api_hash">API Hash</label>
+    <input type="text" id="api_hash" placeholder="0123456789abcdef0123456789abcdef" required/>
+
+    <label for="phone">Phone Number</label>
+    <input type="text" id="phone" placeholder="+14155552671" required/>
+
+    <button class="btn" id="sendBtn" onclick="sendCode()">Send OTP</button>
+    <a class="back-link" href="https://my.telegram.org" target="_blank" rel="noopener">
+      Get API credentials at my.telegram.org
+    </a>
+  </div>
+
+  <!-- Step 2: OTP + optional 2FA -->
+  <div class="step" id="step2">
+    <div class="info-box" id="phone-hint"></div>
+    <div class="error" id="err2"></div>
+
+    <label for="otp">OTP Code</label>
+    <input type="text" id="otp" placeholder="12345" maxlength="10" autocomplete="one-time-code"/>
+
+    <div class="tfa-section" id="tfaSection">
+      <label for="password">Two-Factor Password</label>
+      <input type="password" id="password" placeholder="Your 2FA password"/>
+    </div>
+
+    <button class="btn" id="verifyBtn" onclick="verifyCode()">Verify &amp; Generate</button>
+    <span class="back-link" onclick="restart()">← Start over</span>
+  </div>
+
+  <!-- Step 3: result -->
+  <div class="step" id="step3">
+    <div class="user-info">
+      <div class="name" id="uname"></div>
+      <div class="uname" id="uhandle"></div>
+    </div>
+    <label>Your Session String</label>
+    <div class="session-box" id="sessionBox"></div>
+    <button class="copy-btn" onclick="copySession()">Copy Session String</button>
+    <button class="restart-btn" onclick="restart()">Generate Another</button>
+  </div>
+</div>
+
+<script>
+  let sessionId = null;
+  let needs2fa = false;
+
+  function showStep(n) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+  }
+
+  function showError(stepNum, msg) {
+    const el = document.getElementById('err' + stepNum);
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function clearError(stepNum) {
+    const el = document.getElementById('err' + stepNum);
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.textContent = loading
+      ? (btnId === 'sendBtn' ? 'Sending…' : 'Verifying…')
+      : (btnId === 'sendBtn' ? 'Send OTP' : 'Verify & Generate');
+  }
+
+  async function sendCode() {
+    clearError(1);
+    const api_id = document.getElementById('api_id').value.trim();
+    const api_hash = document.getElementById('api_hash').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+
+    if (!api_id || !api_hash || !phone) {
+      showError(1, 'All fields are required.');
+      return;
+    }
+
+    setLoading('sendBtn', true);
+    const form = new FormData();
+    form.append('api_id', api_id);
+    form.append('api_hash', api_hash);
+    form.append('phone', phone);
+
+    try {
+      const res = await fetch('/send-code', { method: 'POST', body: form });
+      const data = await res.json();
+      if (data.ok) {
+        sessionId = data.session_id;
+        document.getElementById('phone-hint').textContent =
+          `OTP sent to ${phone}. Enter the code below.`;
+        showStep(2);
+      } else {
+        showError(1, data.error || 'Failed to send OTP.');
+      }
+    } catch (e) {
+      showError(1, 'Network error. Please try again.');
+    } finally {
+      setLoading('sendBtn', false);
+    }
+  }
+
+  async function verifyCode() {
+    clearError(2);
+    const code = document.getElementById('otp').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!code) { showError(2, 'Please enter the OTP.'); return; }
+    if (needs2fa && !password) { showError(2, 'Please enter your 2FA password.'); return; }
+
+    setLoading('verifyBtn', true);
+    const form = new FormData();
+    form.append('session_id', sessionId);
+    form.append('code', code);
+    form.append('password', password);
+
+    try {
+      const res = await fetch('/verify-code', { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (data.ok) {
+        document.getElementById('uname').textContent = data.name || 'User';
+        document.getElementById('uhandle').textContent = data.username || '';
+        document.getElementById('sessionBox').textContent = data.session_string;
+        showStep(3);
+      } else if (data.error === '2FA_REQUIRED') {
+        needs2fa = true;
+        document.getElementById('tfaSection').style.display = 'block';
+        showError(2, 'Two-factor authentication is enabled. Please enter your password.');
+      } else {
+        showError(2, data.error || 'Verification failed.');
+      }
+    } catch (e) {
+      showError(2, 'Network error. Please try again.');
+    } finally {
+      setLoading('verifyBtn', false);
+    }
+  }
+
+  function copySession() {
+    const text = document.getElementById('sessionBox').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy Session String'; }, 2000);
+    });
+  }
+
+  function restart() {
+    sessionId = null;
+    needs2fa = false;
+    document.getElementById('otp').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('tfaSection').style.display = 'none';
+    clearError(1);
+    clearError(2);
+    showStep(1);
+  }
+</script>
+</body>
+</html>
