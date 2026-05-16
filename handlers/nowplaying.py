@@ -116,6 +116,7 @@ def register_nowplaying_handlers(app: Client):
 
         elif action == "skip":
             from handlers.music import get_queue, update_session
+            from handlers.voice import skip_in_vc, stop_in_vc, is_vc_active
             queue = get_queue(chat_id)
             if not queue:
                 await callback.answer("❌ Queue is empty.", show_alert=True)
@@ -128,9 +129,13 @@ def register_nowplaying_handlers(app: Client):
                     current_url=nxt["webpage_url"], current_duration=nxt.get("duration", 0),
                     started_at=datetime.utcnow(),
                 )
+                if is_vc_active():
+                    await skip_in_vc(chat_id, nxt["webpage_url"])
                 await callback.answer(f"⏭ Skipped! Now: {nxt['title']}", show_alert=False)
             else:
                 update_session(chat_id, is_playing=False, current_song="", current_url="")
+                if is_vc_active():
+                    await stop_in_vc(chat_id)
                 await callback.answer("⏭ Skipped! Queue is now empty.", show_alert=False)
             await callback.message.delete()
 
