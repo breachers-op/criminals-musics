@@ -97,31 +97,29 @@ python session_generator.py
 
 ## 🏗️ Project Structure
 
-```
 criminals-musics/
-├── bot.py                 # Main bot entry point
-├── config/
-│   └── config.py         # Configuration management
-├── database/
-│   ├── __init__.py
-│   ├── models.py         # Database models (SQLite)
-│   └── db.py             # Database operations
+├── bot.py                  # Main bot entry point
+├── userbot.py              # Userbot client for voice chat streaming
+├── config.py               # Configuration and environment variables
+├── database.py             # Database models and session management
+├── session_generator.py    # CLI tool to generate STRING_SESSION
+├── web_app.py              # Web UI for generating STRING_SESSION
 ├── handlers/
 │   ├── __init__.py
-│   ├── music.py          # Music playing commands
-│   ├── playlist.py       # Playlist management
-│   ├── download.py       # Download commands
-│   └── admin.py          # Sudo/admin commands
-├── utils/
-│   ├── __init__.py
-│   ├── helpers.py        # Helper functions
-│   ├── ytdlp.py          # yt-dlp integration
-│   └── logger.py         # Logging setup
-├── requirements.txt      # Project dependencies
-├── .env.example          # Environment variables template
-├── .gitignore            # Git ignore rules
-└── README.md             # This file
-```
+│   ├── admin.py            # Admin/sudo commands
+│   ├── download.py         # Download commands
+│   ├── filters.py          # Custom Pyrogram filters
+│   ├── lyrics.py           # Lyrics fetching
+│   ├── music.py            # Core music playback and queue
+│   ├── nowplaying.py       # Now playing display and controls
+│   ├── playlist.py         # Playlist management
+│   ├── search.py           # YouTube search
+│   ├── start.py            # Start, help, ping commands
+│   └── voice.py            # PyTgCalls voice chat integration
+├── templates/
+│   └── index.html          # Web session generator UI
+├── requirements.txt        # Python dependencies
+└── README.md               # This file
 
 ## 🔧 Configuration
 
@@ -153,12 +151,6 @@ MIT License - Feel free to use this project for your own purposes.
 
 
 ## 👨‍💻 Author
-
-## 🔐 Generate STRING_SESSION
-
-👉 **[Open Session Generator](https://9bb688fe-6725-4e16-9143-5291b8a26b18-00-jv47so2pe5id.sisko.replit.dev:8080)**
-
-Fill in your API ID, API Hash, and phone number — the OTP goes to your Telegram app. No shell needed.
 
 **breachers-op** - [GitHub Profile](https://github.com/breachers-op)
 
