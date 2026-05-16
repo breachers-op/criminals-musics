@@ -151,7 +151,14 @@ This bot is for educational purposes. Users are responsible for respecting copyr
 
 MIT License - Feel free to use this project for your own purposes.
 
+
 ## 👨‍💻 Author
+
+## 🔐 Generate STRING_SESSION
+
+👉 **[Open Session Generator](https://9bb688fe-6725-4e16-9143-5291b8a26b18-00-jv47so2pe5id.sisko.replit.dev:8080)**
+
+Fill in your API ID, API Hash, and phone number — the OTP goes to your Telegram app. No shell needed.
 
 **breachers-op** - [GitHub Profile](https://github.com/breachers-op)
 
