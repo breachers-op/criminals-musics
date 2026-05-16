@@ -137,6 +137,8 @@ def register_search_handlers(app: Client):
                 await callback.answer("❗ /play only works in group chats.", show_alert=True)
                 return
             from handlers.music import get_queue, update_session
+            from handlers.voice import play_in_vc, is_vc_active
+            from datetime import datetime
             queue = get_queue(cached["chat_id"])
             queue.append({
                 "title": chosen["title"],
@@ -144,8 +146,20 @@ def register_search_handlers(app: Client):
                 "duration": chosen["duration"],
                 "webpage_url": chosen["webpage_url"],
             })
-            update_session(cached["chat_id"], is_playing=True, current_song=chosen["title"], current_url=chosen["webpage_url"])
             position = len(queue)
+            update_session(
+                cached["chat_id"],
+                is_playing=True,
+                current_song=chosen["title"],
+                current_url=chosen["webpage_url"],
+                current_duration=chosen.get("duration", 0),
+                started_at=datetime.utcnow() if position == 1 else None,
+            )
+            vc_note = ""
+            if position == 1 and is_vc_active():
+                streamed = await play_in_vc(cached["chat_id"], chosen["webpage_url"])
+                if not streamed:
+                    vc_note = "\n⚠️ Could not join voice chat. Make sure a voice chat is active."
             label = "🎵 **Now Playing**" if position == 1 else f"📋 **Added to Queue** (#{position})"
             await callback.message.edit_text(
                 f"{label}\n\n"
@@ -153,6 +167,7 @@ def register_search_handlers(app: Client):
                 f"👤 {chosen['channel']}\n"
                 f"⏱ `{format_duration(chosen['duration'])}`\n"
                 f"🔗 [Watch on YouTube]({chosen['webpage_url']})"
+                + vc_note
             )
             await callback.answer("Added to queue!")
 
