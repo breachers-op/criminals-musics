@@ -25,9 +25,15 @@ A powerful Telegram music bot built with PyroTGfork that plays music in voice ch
 
 Generate Pyrogram session strings directly on Replit.
 
-## 🚀 Run on Replit
+## 🔐 Generate String Session
 
-[![Run on Replit](https://replit.com/badge/github/breachers-op/criminals-musics)](https://replit.com/github/breachers-op/criminals-musics)
+Click below to open the shell and generate your `STRING_SESSION`:
+
+[![Generate String Session on Replit](https://replit.com/badge/github/breachers-op/criminals-musics)](https://replit.com/github/breachers-op/criminals-musics)
+
+Once the shell opens, run:
+```bash
+python session_generator.py
 
 ### Setup Steps
 
