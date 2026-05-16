@@ -8,4 +8,4 @@ uvicorn
 python-multipart
 psycopg2-binary
 requests
-py-tgcalls
+py-tgcalls==0.9.18
